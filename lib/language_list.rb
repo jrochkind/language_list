@@ -1,4 +1,6 @@
 require 'yaml'
+require 'csv'
+
 
 module LanguageList
   class LanguageInfo
@@ -51,9 +53,42 @@ module LanguageList
     end
   end
   
-  LANGUAGE_HASH = YAML.load_file(File.expand_path(File.join(File.dirname(__FILE__),'..', 'data', 'languages.yml')))
-  ALL_LANGUAGES = LANGUAGE_HASH.map{|e| LanguageInfo.new(e) }
-  ISO_639_1 = ALL_LANGUAGES.select(&:iso_639_1?)
-  LIVING_LANGUAGES = ALL_LANGUAGES.select(&:living?)
-  COMMON_LANGUAGES = ALL_LANGUAGES.select(&:common?)
+  #LANGUAGE_HASH = YAML.load_file(File.expand_path(File.join(File.dirname(__FILE__),'..', 'data', 'languages.yml')))
+  #ALL_LANGUAGES = LANGUAGE_HASH.map{|e| LanguageInfo.new(e) }
+  #ISO_639_1 = ALL_LANGUAGES.select(&:iso_639_1?)
+  #LIVING_LANGUAGES = ALL_LANGUAGES.select(&:living?)
+  #COMMON_LANGUAGES = ALL_LANGUAGES.select(&:common?)
+
+  # It seems that LANGUAGE_HASH was actually an Array, not a hash, and
+  # is ONLY used to create the other global hashes, it's not actually needed
+  # (and is taking up lots of memory by being stored anyway?)  
+  #
+  # And the others are all hashes too, that doesn't seem great for performance?
+  ALL_LANGUAGES = []
+  ISO_639_1 = []
+  LIVING_LANGUAGES = []
+  COMMON_LANGUAGES = []
+  
+  key_order = [:name, :iso_639_1, :iso_639_3, :iso_639_2b, :iso_639_2t]
+  #  :common, :type, :scope]
+  CSV.foreach(File.expand_path(File.join(File.dirname(__FILE__),'..', 'data', 'languages.csv'))) do |row|
+    hash = {}
+    
+        
+    key_order.each_with_index do |key, index|
+      hash[key.to_sym] = row[index]
+    end
+    hash[:common] = (row[5] == "true")
+    hash[:type] = row[6].to_sym
+    hash[:scope]= row[7].to_sym
+    
+    l = LanguageInfo.new(hash)
+    ALL_LANGUAGES << l
+    ISO_639_1 << l if l.iso_639_1?
+    LIVING_LANGUAGES << l if l.living?
+    COMMON_LANGUAGES << l if l.common?    
+  end
+
+  
+  
 end
